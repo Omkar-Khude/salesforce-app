@@ -5,6 +5,7 @@ import axios from 'axios';
 import Navbar from './Navbar';
 
 const LoggedIn = () => {
+    const apiUrl = process.env.REACT_APP_API_URL;
     const [userInfo, setUserInfo] = useState(null);
     const [loadingUserInfo, setLoadingUserInfo] = useState(true);
     const [loadingMetadata, setLoadingMetadata] = useState(false);
@@ -16,12 +17,14 @@ const LoggedIn = () => {
       });
     const navigate = useNavigate();
 
+    
+
     useEffect(() => {
         const urlParams = new URLSearchParams(window.location.hash.substring(1));
         const accessToken = urlParams.get('access_token');
 
         if (accessToken) {
-            axios.get(`http://localhost:5000/userinfo?access_token=${accessToken}`)
+            axios.get(`${apiUrl}/userinfo?access_token=${accessToken}`)
                 .then(response => {
                     console.log('User Info Response:', response.data);
                     setUserInfo(response.data);

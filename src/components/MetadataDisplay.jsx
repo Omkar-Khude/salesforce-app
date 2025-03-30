@@ -5,6 +5,7 @@ import { useLocation } from 'react-router-dom';
 import axios from "axios";
 
 const MetadataDisplay = () => {
+    const apiUrl = process.env.REACT_APP_API_URL;
     const location = useLocation();
     const [validationRules, setValidationRules] = useState(location.state?.validationRules || []);
     const [selectedRule, setSelectedRule] = useState(null);
@@ -53,7 +54,7 @@ const MetadataDisplay = () => {
     
         setIsLoading(true);
         try {
-            const response = await axios.patch("http://localhost:5000/updateValidationRules", {
+            const response = await axios.patch(`${apiUrl}/updateValidationRules`, {
                 accessToken,
                 instanceUrl,
                 validationRules: modifiedRules,
@@ -89,7 +90,7 @@ const MetadataDisplay = () => {
     
         setIsLoading(true);
         try {
-            const response = await axios.post("http://localhost:5000/rollbackValidationRules", {
+            const response = await axios.post(`${apiUrl}/rollbackValidationRules`, {
                 accessToken,
                 instanceUrl
             });
@@ -97,7 +98,7 @@ const MetadataDisplay = () => {
             console.log("✅ Rollback Response:", response.data);
             
             if (response.data.success) {
-                const fetchResponse = await axios.get("http://localhost:5000/fetchValidationRules", {
+                const fetchResponse = await axios.get(`${apiUrl}/fetchValidationRules`, {
                     params: { accessToken, instanceUrl }
                 });
                 
