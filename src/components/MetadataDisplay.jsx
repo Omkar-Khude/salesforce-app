@@ -15,6 +15,8 @@ const MetadataDisplay = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [showNoChangesModal, setShowNoChangesModal] = useState(false);
+    const [showRollbackModal, setShowRollbackModal] = useState(false);
+    const [rollbackStatus, setRollbackStatus] = useState(null);
 
     const uniqueObjects = [...new Set(validationRules.map(rule => rule.ObjectName))];
 
@@ -70,12 +72,54 @@ const MetadataDisplay = () => {
             setIsLoading(false);
         }
     };
-
-    const rollbackChanges = () => {
-        setValidationRules(prevRules =>
-            prevRules.map(rule => ({ ...rule, isModified: false }))
+    const rollbackChanges = async () => {
+        if (!accessToken || !instanceUrl) {
+            alert("Missing authentication details");
+            return;
+        }
+    
+        
+        const userConfirmed = window.confirm(
+            "This will rollback all validation rules to their original state from when they were first queried.\n\nDo you want to proceed?"
         );
+    
+        if (!userConfirmed) {
+            return;
+        }
+    
+        setIsLoading(true);
+        try {
+            const response = await axios.post("http://localhost:5000/rollbackValidationRules", {
+                accessToken,
+                instanceUrl
+            });
+    
+            console.log("✅ Rollback Response:", response.data);
+            
+            if (response.data.success) {
+                const fetchResponse = await axios.get("http://localhost:5000/fetchValidationRules", {
+                    params: { accessToken, instanceUrl }
+                });
+                
+                setValidationRules(fetchResponse.data.map(rule => ({ 
+                    ...rule, 
+                    isModified: false,
+                    ObjectName: rule.EntityDefinition?.DeveloperName 
+                })));
+                
+                setRollbackStatus("Rollback completed successfully");
+            } else {
+                setRollbackStatus("Rollback partially completed with some errors");
+            }
+        } catch (error) {
+            console.error("❌ Error during rollback:", error.response ? error.response.data : error);
+            setRollbackStatus("Failed to complete rollback");
+        } finally {
+            setIsLoading(false);
+            setShowRollbackModal(true);
+        }
     };
+
     return (
         <div>
             <Navbar />
@@ -95,10 +139,20 @@ const MetadataDisplay = () => {
                 ) : (
                     <div className="mt-3">
                         <div className="d-flex justify-content-center gap-3">
-                            <button style={{ backgroundColor: "#f0ad4e", color:"white",height:"27px",fontSize:"13px",paddingTop:"4px" }}className="btn btn-warning" onClick={rollbackChanges}>
-                                ROLLBACK TO ORIGINAL
+                            <button 
+                                style={{ backgroundColor: "#f0ad4e", color:"white",height:"27px",fontSize:"13px",paddingTop:"4px" }}
+                                className="btn btn-warning" 
+                                onClick={rollbackChanges}
+                                disabled={isLoading}
+                            >
+                                {isLoading ? "ROLLING BACK..." : "ROLLBACK TO ORIGINAL"}
                             </button>
-                            <button style={{ backgroundColor: "#5bc0de", color:"white",height:"27px",fontSize:"13px",paddingTop:"4px"  }}className="btn btn-info" onClick={deployChanges} disabled={isLoading}>
+                            <button 
+                                style={{ backgroundColor: "#5bc0de", color:"white",height:"27px",fontSize:"13px",paddingTop:"4px"  }}
+                                className="btn btn-info" 
+                                onClick={deployChanges} 
+                                disabled={isLoading}
+                            >
                                 {isLoading ? "DEPLOYING..." : "DEPLOY CHANGES"}
                             </button>
                         </div>
@@ -119,7 +173,7 @@ const MetadataDisplay = () => {
                                     <tbody>
                                         {validationRules.filter(rule => rule.ObjectName === objectName).map(rule => (
                                             <tr key={rule.Id}>
-                                                <td style={{ cursor: "pointer", color: "#999a9b", fontSize:"12px"}} onClick={() => setSelectedRule(rule)}>
+                                                <td style={{ cursor: "pointer", color: "#999a9b", fontSize:"12px",fontWeight:"500"}} onClick={() => setSelectedRule(rule)}>
                                                     {rule.ValidationName}
                                                 </td>
                                                 <td style={{ textAlign: "right" }}>
@@ -181,7 +235,7 @@ const MetadataDisplay = () => {
                                 <div className="modal-body" style={{ color: "#999a9b" }}>
                                     <p><strong>Description</strong>: {selectedRule.Description || "No description available."}</p>
                                     <hr />
-                                    <p><strong>Error Condition Formula</strong>: {selectedRule.ErrorConditionFormula ? selectedRule.ErrorConditionFormula : "⚠️ No formula available. Check API response."}</p>
+                                    <p><strong>Error Condition Formula</strong>: {selectedRule.ErrorConditionFormula ? selectedRule.ErrorConditionFormula : ""}</p>
                                     <hr />
                                     <p><strong>Error Display Field</strong>: {selectedRule.ErrorDisplayField}</p>
                                     <hr />
@@ -218,12 +272,33 @@ const MetadataDisplay = () => {
                     </div>
                 )}
 
-                {isLoading ? (
+                {showRollbackModal && (
+                    <div className="modal" style={{ display: "block", backgroundColor: "rgba(0, 0, 0, 0.5)" }}>
+                        <div className="modal-dialog">
+                            <div className="modal-content">
+                                <div className="modal-header" style={{ backgroundColor: "#f0ad4e", color: "white" }}>
+                                    <h5 className="modal-title">Rollback Status</h5>
+                                    <button type="button" className="btn-close" onClick={() => setShowRollbackModal(false)}></button>
+                                </div>
+                                <div className="modal-body">
+                                    <p>{rollbackStatus}</p>
+                                </div>
+                                <div className="modal-footer">
+                                    <button type="button" className="btn btn-secondary" onClick={() => setShowRollbackModal(false)}>
+                                        CLOSE
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {isLoading && (
                     <div className="modal" style={{ display: "block", backgroundColor: "rgba(0, 0, 0, 0.5)" }}>
                         <div className="modal-dialog">
                             <div className="modal-content">
                                 <div className="modal-header" style={{ backgroundColor: "#5cb85c", color: "white" }}>
-                                    <h5 className="modal-title">Deploying Changes</h5>
+                                    <h5 className="modal-title">Processing</h5>
                                 </div>
                                 <div className="modal-body">
                                     <div className="progress">
@@ -232,14 +307,16 @@ const MetadataDisplay = () => {
                                             role="progressbar" 
                                             style={{ width: "100%", backgroundColor: "#5cb85c" }}
                                         >
-                                            Deploying...
+                                            Please wait...
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                ) : showSuccessModal && (
+                )}
+
+                {showSuccessModal && (
                     <div className="modal" style={{ display: "block", backgroundColor: "rgba(0, 0, 0, 0.5)" }}>
                         <div className="modal-dialog">
                             <div className="modal-content">

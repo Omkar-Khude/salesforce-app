@@ -1,3 +1,4 @@
+
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -9,6 +10,8 @@ app.use(express.json());
 const jsforce = require('jsforce');
 
 const PORT = 5000;
+
+const originalRulesStore = new Map();
 
 app.get('/userinfo', async (req, res) => {
     const accessToken = req.query.access_token;
@@ -44,11 +47,77 @@ app.get('/fetchValidationRules', async (req, res) => {
             headers: { Authorization: `Bearer ${accessToken}` }
         });
 
+        const rules = response.data.records;
+        const storeKey = `${instanceUrl}-${accessToken.substring(0, 10)}`;
+        originalRulesStore.set(storeKey, JSON.parse(JSON.stringify(rules)));
+
         console.log("Fetched Validation Rules:", response.data.records);
         res.json(response.data.records);
     } catch (error) {
         console.error("Error fetching validation rules:", error.response?.data || error.message);
         res.status(500).json({ error: "Failed to fetch validation rules" });
+    }
+});
+
+app.post('/rollbackValidationRules', async (req, res) => {
+    const { accessToken, instanceUrl } = req.body;
+
+    if (!accessToken || !instanceUrl) {
+        return res.status(400).json({ error: "Missing access token or instance URL" });
+    }
+
+    try {
+        const storeKey = `${instanceUrl}-${accessToken.substring(0, 10)}`;
+        const originalRules = originalRulesStore.get(storeKey);
+
+        if (!originalRules || originalRules.length === 0) {
+            return res.status(404).json({ error: "Original validation rules not found" });
+        }
+
+        const results = [];
+
+        for (const rule of originalRules) {
+            const updatePayload = {
+                Metadata: {
+                    fullName: rule.ValidationName,
+                    active: rule.Active,
+                    errorConditionFormula: rule.ErrorConditionFormula || "true",
+                    errorMessage: rule.ErrorMessage || "Validation rule error",
+                }
+            };
+
+            try {
+                const response = await axios.patch(
+                    `${instanceUrl}/services/data/v60.0/tooling/sobjects/ValidationRule/${rule.Id}`,
+                    updatePayload,
+                    {
+                        headers: {
+                            Authorization: `Bearer ${accessToken}`,
+                            "Content-Type": "application/json",
+                        }
+                    }
+                );
+
+                results.push({
+                    ruleId: rule.Id,
+                    status: "success",
+                    activeStatus: rule.Active,
+                });
+
+            } catch (sfError) {
+                console.error("Salesforce API Error:", sfError.response?.data || sfError.message);
+                results.push({
+                    ruleId: rule.Id,
+                    status: "failed",
+                    error: sfError.response?.data || sfError.message,
+                });
+            }
+        }
+
+        res.json({ success: true, results });
+    } catch (error) {
+        console.error("General Server Error:", error);
+        res.status(500).json({ error: "Failed to rollback validation rules.", details: error.message });
     }
 });
 
@@ -123,8 +192,5 @@ app.patch("/updateValidationRules", async (req, res) => {
         res.status(500).json({ error: "Failed to update validation rules.", details: error.message });
     }
 });
-
-
-
 
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
