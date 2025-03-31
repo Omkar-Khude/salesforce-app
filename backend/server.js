@@ -13,6 +13,10 @@ const PORT = 5000;
 
 const originalRulesStore = new Map();
 
+app.get('/health', (req, res) => {
+    res.status(200).json({ status: "OK" });
+});
+
 app.get('/userinfo', async (req, res) => {
     const accessToken = req.query.access_token;
 
