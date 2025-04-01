@@ -16,65 +16,23 @@ const LoggedIn = () => {
       });
     const navigate = useNavigate();
 
-    // useEffect(() => {
-    //     const urlParams = new URLSearchParams(window.location.hash.substring(1));
-    //     const accessToken = urlParams.get('access_token');
-
-    //     if (accessToken) {
-    //         axios.get(`${process.env.REACT_APP_BACKEND_URL}/userinfo?access_token=${accessToken}`)
-    //             .then(response => {
-    //                 console.log('User Info Response:', response.data);
-    //                 setUserInfo(response.data);
-    //             })
-    //             .catch(error => console.error('Error fetching user info:', error))
-    //             .finally(() => setLoadingUserInfo(false));
-    //     } else {
-    //         setLoadingUserInfo(false);
-    //     }
-    // }, []);
-
     useEffect(() => {
-        const handleAuthentication = async () => {
-            try {
-                // Extract token from URL fragment
-                const hashParams = new URLSearchParams(window.location.hash.substring(1));
-                const accessToken = hashParams.get('access_token');
-                const instanceUrl = hashParams.get('instance_url');
-                const identityUrl = hashParams.get('id');
+        const urlParams = new URLSearchParams(window.location.hash.substring(1));
+        const accessToken = urlParams.get('access_token');
 
-                if (!accessToken || !instanceUrl) {
-                    throw new Error('Missing access token or instance URL');
-                }
-
-                // Store tokens in session storage
-                sessionStorage.setItem('sf_access_token', accessToken);
-                sessionStorage.setItem('sf_instance_url', instanceUrl);
-
-                // Fetch user info
-                const userResponse = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/userinfo`, {
-                    headers: { Authorization: `Bearer ${accessToken}` }
-                });
-
-                setUserInfo(userResponse.data);
-                
-                // Clean up URL
-                window.history.replaceState({}, document.title, "/logged-in");
-
-            } catch (error) {
-                console.error('Authentication error:', error);
-                setError({
-                    hasError: true,
-                    message: 'Failed to authenticate with Salesforce',
-                    details: error.message
-                });
-            } finally {
-                setLoadingUserInfo(false);
-            }
-        };
-
-        handleAuthentication();
+        if (accessToken) {
+            axios.get(`${process.env.REACT_APP_BACKEND_URL}/userinfo?access_token=${accessToken}`)
+                .then(response => {
+                    console.log('User Info Response:', response.data);
+                    setUserInfo(response.data);
+                })
+                .catch(error => console.error('Error fetching user info:', error))
+                .finally(() => setLoadingUserInfo(false));
+        } else {
+            setLoadingUserInfo(false);
+        }
     }, []);
-    
+
     const fetchValidationRules = async () => {
         setLoadingMetadata(true);
 
