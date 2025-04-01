@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import Navbar from "./Navbar";
 
-const clientId = '3MVG9VMBZCsTL9hmzOC9jLMI8oKB.Yn3GpI..S.TqvpWX6Dvo0l4Y_493GdZypcpAXjBHA7SCxQ==';
+const clientId = '3MVG9rZjd7MXFdLh6J9xIHv6STIZBQCTuave1ZCYVnky96IbOKT99vJ.e11HEoJKHao1wOQpDer0udnaLI002';
 const redirectUri = 'https://salesforce-app1.onrender.com/logged-in';
 
 const Dashboard = () => {
