@@ -4,14 +4,14 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import Navbar from "./Navbar";
 
 const clientId = '3MVG9VMBZCsTL9hmzOC9jLMI8oKB.Yn3GpI..S.TqvpWX6Dvo0l4Y_493GdZypcpAXjBHA7SCxQ==';
-const redirectUri = 'https://salesforce-app1.onrender.com/logged-in';
-
+const redirectUri = window.location.origin + window.location.pathname + 'logged-in';
 const Dashboard = () => {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
 
     const handleLogin = () => {
         setLoading(true);
+
         const oauthUrl = `https://login.salesforce.com/services/oauth2/authorize?response_type=token&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}`;
         
         window.location.href = oauthUrl;
