@@ -147,29 +147,37 @@ const LoggedIn = () => {
     const navigate = useNavigate();
 
     useEffect(() => {
+        // Ensure URL hash is processed correctly
+        console.log("Full Redirect URL:", window.location.href);
         const urlParams = new URLSearchParams(window.location.hash.substring(1));
         const accessToken = urlParams.get('access_token');
-
-        if (!accessToken) {
+        const instanceUrl = urlParams.get('instance_url');
+    
+        if (accessToken && instanceUrl) {
+            console.log("Access Token:", accessToken);
+            console.log("Instance URL:", instanceUrl);
+    
+            axios.get(`${process.env.REACT_APP_BACKEND_URL}/userinfo?access_token=${accessToken}`)
+                .then(response => {
+                    console.log('User Info Response:', response.data);
+                    setUserInfo(response.data);
+                })
+                .catch(error => {
+                    console.error('Error fetching user info:', error);
+                    setError({
+                        hasError: true,
+                        message: "Failed to load user info",
+                        details: error.response?.data || error.message,
+                        statusCode: error.response?.status || 500
+                    });
+                })
+                .finally(() => setLoadingUserInfo(false));
+        } else {
+            console.error("Access token not found in URL.");
             setLoadingUserInfo(false);
-            return;
         }
-
-        // Store access token in localStorage for persistence
-        localStorage.setItem('accessToken', accessToken);
-
-        axios.get(`${process.env.REACT_APP_BACKEND_URL}/userinfo?access_token=${accessToken}`)
-            .then(response => {
-                console.log('User Info:', response.data);
-                setUserInfo(response.data);
-            })
-            .catch(err => {
-                console.error('Error fetching user info:', err);
-                setError("Failed to load user info. Try logging in again.");
-            })
-            .finally(() => setLoadingUserInfo(false));
     }, []);
-
+    
     const fetchValidationRules = async () => {
         setLoadingMetadata(true);
         setError(null);
