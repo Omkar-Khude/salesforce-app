@@ -75,48 +75,53 @@ import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import Navbar from "./Navbar";
 
-// Dynamic redirect URI based on environment
-const getRedirectUri = () => {
-  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    return 'http://localhost:3000/logged-in';
-  }
-  return 'https://salesforce-app1.onrender.com/logged-in';
-};
-
 const Dashboard = () => {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
-    const [redirectUri] = useState(getRedirectUri());
+    const [debugInfo, setDebugInfo] = useState({});
+
+    // Dynamic environment detection
+    const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+    const clientId = '3MVG9VMBZCsTL9hmzOC9jLMI8oKB.Yn3GpI..S.TqvpWX6Dvo0l4Y_493GdZypcpAXjBHA7SCxQ==';
+    const redirectUri = isProduction 
+        ? 'https://salesforce-app1.onrender.com/#/logged-in' 
+        : 'http://localhost:3000/#/logged-in';
 
     useEffect(() => {
-      // Verify the redirect URI is correct on component mount
-      console.log('Using redirect URI:', redirectUri);
-    }, [redirectUri]);
+        setDebugInfo({
+            currentUrl: window.location.href,
+            redirectUri,
+            isProduction,
+            clientId
+        });
+    }, []);
 
     const handleLogin = () => {
         setLoading(true);
         setError(null);
         
-        // First verify the URL is correct
-        if (!redirectUri.includes('https://') && !redirectUri.includes('http://localhost')) {
-          setError('Invalid redirect URL configuration');
-          setLoading(false);
-          return;
-        }
-
         try {
             const authUrl = new URL('https://login.salesforce.com/services/oauth2/authorize');
-            authUrl.searchParams.append('response_type', 'token');
-            authUrl.searchParams.append('client_id', '3MVG9VMBZCsTL9hmzOC9jLMI8oKB.Yn3GpI..S.TqvpWX6Dvo0l4Y_493GdZypcpAXjBHA7SCxQ==');
-            authUrl.searchParams.append('redirect_uri', redirectUri);
+            const params = new URLSearchParams({
+                response_type: 'token',
+                client_id: clientId,
+                redirect_uri: redirectUri,
+                prompt: 'login',
+                display: 'page'
+            });
+
+            authUrl.search = params.toString();
             
-            console.log('Redirecting to:', authUrl.toString());
+            console.log('OAuth Redirect URL:', authUrl.toString());
             window.location.href = authUrl.toString();
         } catch (err) {
-            setError(`Login failed: ${err.message}`);
+            setError({
+                message: 'Failed to initiate OAuth flow',
+                details: err.message,
+                redirectUriUsed: redirectUri
+            });
             setLoading(false);
-            console.error("OAuth Error:", err);
         }
     };
 
@@ -125,24 +130,46 @@ const Dashboard = () => {
             <Navbar />
             <div className="container mt-5 px-5">
                 <div className="mt-5">
+                    <h2 style={{ color: '#ff4d00' }}>Salesforce Switch</h2>
+                    
                     {error && (
                         <div className="alert alert-danger">
-                            <h5>Authentication Error</h5>
-                            <p>{error}</p>
-                            <small className="text-muted">
-                                Current redirect URI: {redirectUri}
-                            </small>
+                            <h4>Authentication Error</h4>
+                            <p>{error.message}</p>
+                            <div className="mt-3">
+                                <h5>Debug Information:</h5>
+                                <pre>{JSON.stringify({
+                                    error,
+                                    debugInfo,
+                                    timestamp: new Date().toISOString()
+                                }, null, 2)}</pre>
+                            </div>
                         </div>
                     )}
 
-                    <button 
-                        onClick={handleLogin}
-                        className="btn btn-primary btn-lg"
-                        style={{ backgroundColor: "#ff4d00", border: "none" }}
-                        disabled={loading}
-                    >
-                        {loading ? 'Redirecting to Salesforce...' : 'Login with Salesforce'}
-                    </button>
+                    <div className="d-flex align-items-center mt-4">
+                        <button 
+                            onClick={handleLogin}
+                            className="btn btn-primary"
+                            style={{ 
+                                backgroundColor: "#ff4d00", 
+                                padding: "10px 20px",
+                                fontSize: "1.1rem"
+                            }}
+                            disabled={loading}
+                        >
+                            {loading ? 'Redirecting...' : 'Login with Salesforce'}
+                        </button>
+                    </div>
+
+                    <div className="mt-4 p-3 bg-light rounded">
+                        <h5>Current Configuration:</h5>
+                        <ul>
+                            <li><strong>Environment:</strong> {isProduction ? 'Production' : 'Development'}</li>
+                            <li><strong>Redirect URI:</strong> {redirectUri}</li>
+                            <li><strong>Client ID:</strong> {clientId}</li>
+                        </ul>
+                    </div>
                 </div>
             </div>
         </div>
