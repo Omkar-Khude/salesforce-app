@@ -131,41 +131,70 @@
 // };
 
 // export default LoggedIn;
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 const LoggedIn = () => {
     const location = useLocation();
     const navigate = useNavigate();
+    const [error, setError] = useState(null);
 
     useEffect(() => {
-        const parseHash = () => {
-            const hash = location.state?.hash || window.location.hash.substring(1);
-            if (!hash) {
-                navigate('/');
-                return;
-            }
+        console.log('LoggedIn component mounted');
+        console.log('Location state:', location.state);
+        console.log('Window hash:', window.location.hash);
 
+        const hash = location.state?.hash || window.location.hash.substring(1);
+        console.log('Processing hash:', hash);
+
+        if (!hash) {
+            console.error('No OAuth hash found');
+            setError('No authentication data found');
+            navigate('/');
+            return;
+        }
+
+        try {
             const params = new URLSearchParams(hash);
             const accessToken = params.get('access_token');
             const instanceUrl = params.get('instance_url');
 
-            if (accessToken && instanceUrl) {
-                // Store tokens and proceed
-                localStorage.setItem('sf_access_token', accessToken);
-                localStorage.setItem('sf_instance_url', instanceUrl);
-                // Continue with your app flow
-            } else {
-                navigate('/');
-            }
-        };
+            console.log('Extracted access token:', accessToken ? '*****' : 'None');
+            console.log('Extracted instance URL:', instanceUrl);
 
-        parseHash();
+            if (!accessToken || !instanceUrl) {
+                throw new Error('Missing required OAuth parameters');
+            }
+
+            // Store tokens securely
+            localStorage.setItem('sf_access_token', accessToken);
+            localStorage.setItem('sf_instance_url', instanceUrl);
+
+            // Proceed to your main application
+            navigate('/metadata-display');
+            
+        } catch (err) {
+            console.error('Error processing OAuth response:', err);
+            setError(`Authentication failed: ${err.message}`);
+            navigate('/');
+        }
     }, [location, navigate]);
 
     return (
-        <div>
-            <h2>Loading your Salesforce session...</h2>
+        <div className="container mt-5">
+            {error ? (
+                <div className="alert alert-danger">
+                    <h4>Authentication Error</h4>
+                    <p>{error}</p>
+                </div>
+            ) : (
+                <div className="text-center">
+                    <div className="spinner-border text-primary" role="status">
+                        <span className="visually-hidden">Loading...</span>
+                    </div>
+                    <p className="mt-3">Completing Salesforce authentication...</p>
+                </div>
+            )}
         </div>
     );
 };
