@@ -4,7 +4,7 @@ import Dashboard from './components/Dashboard';
 import LoggedIn from './components/LoggedIn';
 import MetadataDisplay from './components/MetadataDisplay';
 
-;
+
 const App = () => {
   return (
     <Router>
