@@ -79,98 +79,46 @@ const Dashboard = () => {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
-    const [debugInfo, setDebugInfo] = useState({});
 
-    // Dynamic environment detection
-    const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
-    const clientId = '3MVG9VMBZCsTL9hmzOC9jLMI8oKB.Yn3GpI..S.TqvpWX6Dvo0l4Y_493GdZypcpAXjBHA7SCxQ==';
-    const redirectUri = isProduction 
-        ? 'https://salesforce-app1.onrender.com/#/logged-in' 
-        : 'http://localhost:3000/#/logged-in';
+    // Dynamic redirect URI with hash-based routing
+    const redirectUri = window.location.host.includes('localhost') 
+        ? `${window.location.origin}/#/logged-in`
+        : 'https://salesforce-app1.onrender.com/#/logged-in';
 
     useEffect(() => {
-        setDebugInfo({
-            currentUrl: window.location.href,
-            redirectUri,
-            isProduction,
-            clientId
-        });
-    }, []);
+        // Check for OAuth response in URL hash
+        const hash = window.location.hash.substring(1);
+        if (hash.includes('access_token')) {
+            navigate('/logged-in', { state: { hash } });
+        }
+    }, [navigate]);
 
     const handleLogin = () => {
         setLoading(true);
-        setError(null);
-        
-        try {
-            const authUrl = new URL('https://login.salesforce.com/services/oauth2/authorize');
-            const params = new URLSearchParams({
-                response_type: 'token',
-                client_id: clientId,
-                redirect_uri: redirectUri,
-                prompt: 'login',
-                display: 'page'
-            });
-
-            authUrl.search = params.toString();
-            
-            console.log('OAuth Redirect URL:', authUrl.toString());
-            window.location.href = authUrl.toString();
-        } catch (err) {
-            setError({
-                message: 'Failed to initiate OAuth flow',
-                details: err.message,
-                redirectUriUsed: redirectUri
-            });
-            setLoading(false);
-        }
+        const authUrl = new URL('https://login.salesforce.com/services/oauth2/authorize');
+        const params = new URLSearchParams({
+            response_type: 'token',
+            client_id: '3MVG9VMBZCsTL9hmzOC9jLMI8oKB.Yn3GpI..S.TqvpWX6Dvo0l4Y_493GdZypcpAXjBHA7SCxQ==',
+            redirect_uri: redirectUri,
+            scope: 'api refresh_token',
+            prompt: 'login'
+        });
+        authUrl.search = params.toString();
+        window.location.href = authUrl.toString();
     };
 
     return (
         <div>
             <Navbar />
             <div className="container mt-5 px-5">
-                <div className="mt-5">
-                    <h2 style={{ color: '#ff4d00' }}>Salesforce Switch</h2>
-                    
-                    {error && (
-                        <div className="alert alert-danger">
-                            <h4>Authentication Error</h4>
-                            <p>{error.message}</p>
-                            <div className="mt-3">
-                                <h5>Debug Information:</h5>
-                                <pre>{JSON.stringify({
-                                    error,
-                                    debugInfo,
-                                    timestamp: new Date().toISOString()
-                                }, null, 2)}</pre>
-                            </div>
-                        </div>
-                    )}
-
-                    <div className="d-flex align-items-center mt-4">
-                        <button 
-                            onClick={handleLogin}
-                            className="btn btn-primary"
-                            style={{ 
-                                backgroundColor: "#ff4d00", 
-                                padding: "10px 20px",
-                                fontSize: "1.1rem"
-                            }}
-                            disabled={loading}
-                        >
-                            {loading ? 'Redirecting...' : 'Login with Salesforce'}
-                        </button>
-                    </div>
-
-                    <div className="mt-4 p-3 bg-light rounded">
-                        <h5>Current Configuration:</h5>
-                        <ul>
-                            <li><strong>Environment:</strong> {isProduction ? 'Production' : 'Development'}</li>
-                            <li><strong>Redirect URI:</strong> {redirectUri}</li>
-                            <li><strong>Client ID:</strong> {clientId}</li>
-                        </ul>
-                    </div>
-                </div>
+                {error && <div className="alert alert-danger">{error}</div>}
+                <button 
+                    onClick={handleLogin}
+                    className="btn btn-primary"
+                    disabled={loading}
+                >
+                    {loading ? 'Redirecting...' : 'Login with Salesforce'}
+                </button>
             </div>
         </div>
     );
