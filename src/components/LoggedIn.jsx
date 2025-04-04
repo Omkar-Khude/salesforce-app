@@ -8,12 +8,6 @@ const LoggedIn = () => {
     const [userInfo, setUserInfo] = useState(null);
     const [loadingUserInfo, setLoadingUserInfo] = useState(true);
     const [loadingMetadata, setLoadingMetadata] = useState(false);
-    const [error, setError] = useState({
-        hasError: false,
-        message: '',
-        details: null,
-        statusCode: null
-      });
     const navigate = useNavigate();
 
     useEffect(() => {

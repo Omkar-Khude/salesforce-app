@@ -7,7 +7,6 @@ const axios = require('axios');
 const app = express();
 app.use(cors());
 app.use(express.json());
-const jsforce = require('jsforce');
 
 const PORT = 5000;
 
