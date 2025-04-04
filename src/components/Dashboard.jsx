@@ -138,7 +138,23 @@ const Dashboard = () => {
                         </div>
                     )}
 
-                    {/* ... rest of your JSX remains the same ... */}
+<div className="d-flex align-items-center">
+                        <label className="me-2">Environment :</label>
+                        <label className="me-2">Production</label>                         <button 
+                            onClick={handleLogin} 
+                            style={{ 
+                                backgroundColor: "#ff4d00", 
+                                color: "white", 
+                                border: "none", 
+                                fontSize: "16px", 
+                                padding: "5px 15px",
+                                cursor: "pointer"
+                            }}
+                            disabled={loading}
+                        >
+                            {loading ? "Logging in..." : "LOGIN"}
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
